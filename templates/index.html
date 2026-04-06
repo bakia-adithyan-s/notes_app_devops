@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notes and Reminders</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Notes and Reminders</p>
+        <h1>Keep tasks, reminders, and status in one place.</h1>
+        <p class="hero-copy">A simple Flask app for capturing notes, setting due times, and tracking what is overdue.</p>
+      </div>
+      <div class="hero-panel">
+        <div>
+          <span class="panel-label">Total notes</span>
+          <strong>{{ notes|length }}</strong>
+        </div>
+        <div>
+          <span class="panel-label">Pending</span>
+          <strong>{{ notes | selectattr('is_completed', 'equalto', false) | list | length }}</strong>
+        </div>
+        <div>
+          <span class="panel-label">Completed</span>
+          <strong>{{ notes | selectattr('is_completed', 'equalto', true) | list | length }}</strong>
+        </div>
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="alerts">
+          {% for category, message in messages %}
+            <div class="alert {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <section class="content-grid">
+      <form class="note-form card" method="post" action="{{ url_for('add_note') }}">
+        <div class="card-header">
+          <div>
+            <p class="section-kicker">Create note</p>
+            <h2>New note</h2>
+          </div>
+        </div>
+        <label>
+          Title
+          <input type="text" name="title" placeholder="Meeting notes" required>
+        </label>
+        <label>
+          Content
+          <textarea name="content" rows="5" placeholder="Write the note details here..."></textarea>
+        </label>
+        <div class="form-row">
+          <label>
+            Reminder datetime
+            <input type="datetime-local" name="reminder_at">
+          </label>
+          <label>
+            Status
+            <select name="status">
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+            </select>
+          </label>
+        </div>
+        <button type="submit">Add note</button>
+      </form>
+
+      <div class="notes-area">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Your list</p>
+            <h2>Saved notes</h2>
+          </div>
+        </div>
+
+        {% if notes %}
+          <div class="notes-grid">
+            {% for note in notes %}
+              <article class="note-card card {% if note.is_overdue %}overdue{% endif %} {% if note.is_completed %}completed{% endif %}">
+                <div class="note-topline">
+                  <span class="status-pill {{ note.status }}">{{ note.status }}</span>
+                  {% if note.is_overdue %}
+                    <span class="status-pill overdue-pill">Overdue</span>
+                  {% endif %}
+                </div>
+                <h3>{{ note.title }}</h3>
+                <p class="note-content">{{ note.content or 'No content provided.' }}</p>
+                <dl class="note-meta">
+                  <div>
+                    <dt>Created</dt>
+                    <dd>{{ note.created_display }}</dd>
+                  </div>
+                  <div>
+                    <dt>Reminder</dt>
+                    <dd>{{ note.reminder_at | datetime_label }}</dd>
+                  </div>
+                  <div>
+                    <dt>Updated</dt>
+                    <dd>{{ note.updated_display }}</dd>
+                  </div>
+                </dl>
+                <form class="inline-form edit-form" method="post" action="{{ url_for('edit_note', note_id=note.id) }}">
+                  <label>
+                    Title
+                    <input type="text" name="title" value="{{ note.title }}" required>
+                  </label>
+                  <label>
+                    Content
+                    <textarea name="content" rows="4">{{ note.content }}</textarea>
+                  </label>
+                  <div class="form-row">
+                    <label>
+                      Reminder datetime
+                      <input type="datetime-local" name="reminder_at" value="{{ note.reminder_at[:16] if note.reminder_at else '' }}">
+                    </label>
+                    <label>
+                      Status
+                      <select name="status">
+                        <option value="pending" {% if note.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="completed" {% if note.status == 'completed' %}selected{% endif %}>Completed</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="note-actions">
+                    <button type="submit" class="secondary">Save changes</button>
+                  </div>
+                </form>
+                <form class="delete-form" method="post" action="{{ url_for('delete_note', note_id=note.id) }}" onsubmit="return confirm('Delete this note?');">
+                  <button type="submit" class="danger">Delete</button>
+                </form>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state card">
+            <h3>No notes yet</h3>
+            <p>Add your first note on the left. Notes with overdue reminders will be highlighted automatically.</p>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+</body>
+</html>
